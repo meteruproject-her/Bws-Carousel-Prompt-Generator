@@ -1,0 +1,6 @@
+{
+  "name": "BWS Carousel Engine",
+  "description": "Studio pembuat blueprint konten carousel media sosial berbasis AI untuk menyusun headline, body copy, dan image prompt terstruktur.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
