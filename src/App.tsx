@@ -534,22 +534,113 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-[#1C1615] flex flex-col">
-      {/* Top Bar Contract: 3 zones separated by gap-8 */}
-      <header className="border-b border-[#E6DDD1] bg-[#FDFBF7] sticky top-0 z-30">
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-10 h-16 flex items-center justify-between gap-8">
-          {/* Zone 1: Single-line brand wordmark */}
-          <a
-            href="#studio"
-            className="font-display text-lg font-bold tracking-tight text-[#1C1615] whitespace-nowrap shrink-0 flex items-center gap-2"
-          >
-            <span>BWS Carousel Engine</span>
-            <span className="text-[10px] bg-[#8B1E24]/10 text-[#8B1E24] px-2 py-0.5 rounded-full font-mono font-semibold">
-              Bawaslu Paser
-            </span>
-          </a>
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#FDFBF7] text-[#1C1615] flex flex-col">
+      {/* Top Bar Contract: 1 row on md+ desktop, clean 2 rows on mobile (<768px) */}
+      <header className="w-full max-w-full border-b border-[#E6DDD1] bg-[#FDFBF7] sticky top-0 z-30">
+        <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-10 py-2.5 md:py-0 md:h-16 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-6">
+          {/* Row 1 (Mobile) / Zone 1 (Desktop): Brand + Mobile User Profile & Keluar */}
+          <div className="w-full md:w-auto flex items-center justify-between gap-2 min-w-0">
+            <a
+              href="#studio"
+              className="font-display text-[15px] sm:text-lg font-bold tracking-tight text-[#1C1615] whitespace-nowrap flex items-center gap-2 min-w-0"
+            >
+              <span className="truncate">BWS Carousel Engine</span>
+              <span className="hidden sm:inline-flex text-[10px] bg-[#8B1E24]/10 text-[#8B1E24] px-2 py-0.5 rounded-full font-mono font-semibold shrink-0">
+                Bawaslu Paser
+              </span>
+            </a>
 
-          {/* Zone 2: Clean single-line navigation links */}
+            {/* Mobile-only User Profile + Keluar in Row 1 */}
+            <div className="flex md:hidden items-center gap-1.5 shrink-0 min-w-0">
+              {session ? (
+                <div className="flex items-center gap-1.5 pl-1.5 pr-1 py-1 bg-white border border-[#E6DDD1] rounded-lg min-w-0">
+                  {session.avatar && !avatarLoadError ? (
+                    <img
+                      src={session.avatar}
+                      alt={session.nama_staf || session.email}
+                      onError={() => setAvatarLoadError(true)}
+                      referrerPolicy="no-referrer"
+                      className="w-6 h-6 rounded-full object-cover border border-[#DDD2C4] shrink-0"
+                    />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-[#8B1E24]/10 text-[#8B1E24] flex items-center justify-center shrink-0">
+                      <User className="w-3 h-3" aria-hidden="true" />
+                    </div>
+                  )}
+
+                  <span
+                    className="text-[11px] font-semibold text-[#1C1615] truncate max-w-[92px] min-[400px]:max-w-[110px]"
+                    title={session.nama_staf || session.email}
+                  >
+                    {session.nama_staf || session.email.split("@")[0]}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearStoredSession();
+                      setSession(null);
+                      setIsLoginModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-[#8B1E24] bg-[#FAF6EF] hover:bg-[#8B1E24] hover:text-[#FDFBF7] border border-[#E6DDD1] rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                    title="Keluar dari akun Google"
+                  >
+                    <LogOut className="w-3 h-3" aria-hidden="true" />
+                    <span>Keluar</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-[#FDFBF7] bg-[#8B1E24] hover:bg-[#72171C] rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <User className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Masuk</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Row 2: Compact Navigation + Reset */}
+          <nav
+            aria-label="Navigasi mobile"
+            className="flex md:hidden items-center flex-wrap gap-1.5 w-full pt-1.5 border-t border-[#EFE8DE]/80"
+          >
+            <a
+              href="#studio"
+              className="px-2.5 py-1.5 text-xs font-medium text-[#1C1615] bg-[#FAF6EF] hover:bg-[#F3ECE1] border border-[#E6DDD1] rounded-md transition-colors whitespace-nowrap"
+            >
+              Workspace
+            </a>
+            <button
+              type="button"
+              onClick={() => setIsHistoryDrawerOpen(true)}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-[#1C1615] bg-[#FAF6EF] hover:bg-[#F3ECE1] border border-[#E6DDD1] rounded-md transition-colors whitespace-nowrap cursor-pointer"
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-[#8B1E24]" aria-hidden="true" />
+              <span>Riwayat Tersimpan</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsRulesDrawerOpen(true)}
+              className="px-2.5 py-1.5 text-xs font-medium text-[#1C1615] bg-[#FAF6EF] hover:bg-[#F3ECE1] border border-[#E6DDD1] rounded-md transition-colors whitespace-nowrap cursor-pointer"
+            >
+              Aturan Komposisi
+            </button>
+            <button
+              type="button"
+              disabled={!blueprint && !rawText}
+              onClick={handleResetWorkspace}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-[#8B1E24] bg-[#F3ECE1] hover:bg-[#EAE0D0] disabled:opacity-45 disabled:pointer-events-none rounded-md transition-colors whitespace-nowrap cursor-pointer ml-auto"
+              title="Reset ruang kerja"
+            >
+              <RotateCcw className="w-3 h-3" aria-hidden="true" />
+              <span>Reset</span>
+            </button>
+          </nav>
+
+          {/* Desktop Zone 2: Clean single-line navigation links */}
           <nav
             aria-label="Navigasi utama"
             className="hidden md:flex items-center gap-6 text-sm font-medium text-[#5C4F4D]"
@@ -577,17 +668,8 @@ export default function App() {
             </button>
           </nav>
 
-          {/* Zone 3: Google Account Profile & Actions */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsHistoryDrawerOpen(true)}
-              className="md:hidden p-2 text-[#5C4F4D] hover:text-[#8B1E24] bg-[#FAF6EF] border border-[#E6DDD1] rounded-lg transition cursor-pointer"
-              title="Riwayat Tersimpan"
-            >
-              <FolderOpen className="w-4 h-4" />
-            </button>
-
+          {/* Desktop Zone 3: Google Account Profile & Actions */}
+          <div className="hidden md:flex items-center gap-2.5 shrink-0">
             {blueprint && (
               <button
                 type="button"
@@ -616,7 +698,7 @@ export default function App() {
                   </div>
                 )}
 
-                <div className="hidden sm:flex flex-col text-left leading-tight min-w-0">
+                <div className="flex flex-col text-left leading-tight min-w-0">
                   <span
                     className="text-xs font-semibold text-[#1C1615] truncate max-w-[140px]"
                     title={session.nama_staf || session.email}
@@ -660,22 +742,22 @@ export default function App() {
       </header>
 
       {/* Main Two-Column Studio Workspace */}
-      <main id="studio" className="flex-1 w-full max-w-[1440px] mx-auto px-6 lg:px-10 py-8">
+      <main id="studio" className="flex-1 w-full max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-10 py-5 sm:py-8 min-w-0">
         {/* Editorial Header */}
-        <div className="mb-8 pb-6 border-b border-[#E6DDD1]">
+        <div className="mb-6 sm:mb-8 pb-5 sm:pb-6 border-b border-[#E6DDD1] min-w-0">
           <p className="text-xs font-medium tracking-wide text-[#8B1E24]">
             Produksi Konten Carousel · Bawaslu Kabupaten Paser
           </p>
-          <h1 className="mt-1.5 font-display text-2xl sm:text-3xl font-bold tracking-tight text-[#1C1615] text-balance">
+          <h1 className="mt-1.5 font-display text-xl sm:text-3xl font-bold tracking-tight text-[#1C1615] text-balance">
             Ubah Naskah Mentah Menjadi Blueprint Slide Terstruktur
           </h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start w-full min-w-0">
           {/* LEFT PANEL: INPUT */}
           <section
             aria-label="Panel Input Naskah"
-            className="lg:col-span-5 lg:sticky lg:top-24 bg-white border border-[#E6DDD1] rounded-xl p-6"
+            className="w-full min-w-0 lg:col-span-5 lg:sticky lg:top-24 bg-white border border-[#E6DDD1] rounded-xl p-4 sm:p-6"
           >
             {/* Composition Rules Bar at Top of Input Panel */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-5 border-b border-[#EFE8DE]">
@@ -946,12 +1028,12 @@ export default function App() {
           <section
             ref={outputRef}
             aria-label="Panel Output Blueprint"
-            className="lg:col-span-7 space-y-5"
+            className="w-full min-w-0 lg:col-span-7 space-y-5"
           >
             {/* Output Header Toolbar */}
-            <div className="bg-white border border-[#E6DDD1] rounded-xl p-5 flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h2 className="font-display text-lg font-bold text-[#1C1615]">
+            <div className="w-full min-w-0 bg-white border border-[#E6DDD1] rounded-xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+              <div className="min-w-0">
+                <h2 className="font-display text-lg font-bold text-[#1C1615] break-words">
                   {blueprint ? blueprint.title : "Hasil Blueprint Slide"}
                 </h2>
                 <p className="text-xs text-[#6B5D5A] mt-0.5 tabular-nums">
@@ -961,7 +1043,7 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0 max-w-full">
                 {blueprint && (
                   <div className="flex items-center p-1 bg-[#F5EFE6] rounded-lg">
                     <button
@@ -993,7 +1075,7 @@ export default function App() {
                   type="button"
                   onClick={handleCopyAllSlides}
                   disabled={!blueprint || blueprint.slides.length === 0}
-                  className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-45 disabled:pointer-events-none ${
+                  className={`inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-45 disabled:pointer-events-none ${
                     copiedAll
                       ? "bg-[#15803D] text-white"
                       : "bg-[#8B1E24] text-[#FDFBF7] hover:bg-[#72171C]"
@@ -1016,11 +1098,11 @@ export default function App() {
 
             {/* Output States: Loading / Empty / Populated */}
             {blueprint && !isLoading && (
-              <div className="mb-6 bg-white border border-[#E6DDD1] rounded-xl p-5 shadow-sm space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#8B1E24]"></span>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+              <div className="w-full min-w-0 mb-6 bg-white border border-[#E6DDD1] rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-gray-100 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#8B1E24] shrink-0"></span>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide break-words">
                       Metadata Blueprint {activeBlueprintId ? `(Tersimpan: ${activeBlueprintId})` : "(Belum Disimpan)"}
                     </h3>
                   </div>
@@ -1155,7 +1237,7 @@ export default function App() {
                 )}
               </div>
             ) : !blueprint ? (
-              <div className="bg-white border border-[#E6DDD1] rounded-xl p-8 sm:p-10">
+              <div className="w-full min-w-0 bg-white border border-[#E6DDD1] rounded-xl p-5 sm:p-10">
                 <div className="max-w-lg">
                   <div className="w-10 h-10 rounded-lg bg-[#8B1E24]/10 text-[#8B1E24] flex items-center justify-center mb-4">
                     <Layers className="w-5 h-5" aria-hidden="true" />

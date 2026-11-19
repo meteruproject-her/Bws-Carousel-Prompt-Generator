@@ -206,11 +206,11 @@ export function SlideCard({
 
   return (
     <article
-      className="bg-white border border-[#E6DDD1] rounded-xl p-6 transition-colors duration-150 hover:border-[#D4C5B4]"
+      className="w-full min-w-0 bg-white border border-[#E6DDD1] rounded-xl p-4 sm:p-6 transition-colors duration-150 hover:border-[#D4C5B4]"
       aria-label={pageIndicator}
     >
       {/* Top Meta & Explicit Page Indicator Row */}
-      <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#EFE8DE]">
+      <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#EFE8DE] min-w-0">
         <div className="flex flex-wrap items-center gap-2 text-xs text-[#6B5D5A] tabular-nums">
           <span className={headlineWords > 6 ? "text-[#B45309] font-medium" : ""}>
             Headline {headlineWords}/6 kata
@@ -523,9 +523,9 @@ export function SlideCard({
       </div>
 
       {/* Image Prompt Box (Bounded height + vertical scroll, actions stay outside scroll) */}
-      <div className="mt-5 pt-4 border-t border-[#EFE8DE]">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C4F4D]">
+      <div className="mt-5 pt-4 border-t border-[#EFE8DE] w-full min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C4F4D] min-w-0">
             <span className="font-medium">
               Image Prompt Terpadu · 4:5 Comic / Anime + Tata Letak &amp; Teks
             </span>
@@ -535,7 +535,7 @@ export function SlideCard({
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0 max-w-full">
             {slide.isManualPrompt && slide.illustration_scene && (
               <button
                 type="button"
@@ -582,13 +582,13 @@ export function SlideCard({
           </div>
         </div>
 
-        <div className="relative bg-[#FAF6EF] border border-[#E6DDD1] rounded-lg overflow-hidden">
+        <div className="relative w-full min-w-0 bg-[#FAF6EF] border border-[#E6DDD1] rounded-lg overflow-hidden">
           <div
             ref={promptScrollRef}
             onScroll={updateScrollFade}
-            className="max-h-[156px] overflow-y-auto prompt-scrollbar p-3.5 pr-3"
+            className="w-full min-w-0 max-h-[156px] overflow-y-auto prompt-scrollbar p-3.5 pr-3"
           >
-            <p className="font-mono text-[12px] leading-[1.65] text-[#382F2D] break-words select-all whitespace-pre-line">
+            <p className="font-mono text-[12px] leading-[1.65] text-[#382F2D] break-words [overflow-wrap:anywhere] select-all whitespace-pre-line">
               {slide.image_prompt}
             </p>
           </div>

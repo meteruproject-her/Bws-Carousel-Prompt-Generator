@@ -43,19 +43,19 @@ export function SlideVisualPreview({
   }
 
   return (
-    <div className="bg-white border border-[#E6DDD1] rounded-xl p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#EFE8DE]">
-        <div className="flex items-center gap-3">
+    <div className="w-full min-w-0 bg-white border border-[#E6DDD1] rounded-xl p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#EFE8DE] min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           <span className="font-mono text-xs font-medium text-[#8B1E24] tabular-nums">
             Pratinjau Kanvas 4:5 · {pageText}
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 max-w-full">
           <button
             type="button"
             onClick={() => setShowSafeZones((v) => !v)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#4A3F3D] bg-[#FAF6EF] border border-[#E6DDD1] hover:border-[#8B1E24]/40 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-medium text-[#4A3F3D] bg-[#FAF6EF] border border-[#E6DDD1] hover:border-[#8B1E24]/40 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Eye className="w-3.5 h-3.5" aria-hidden="true" />
             <span>{showSafeZones ? "Sembunyikan Panduan" : "Tampilkan Panduan"}</span>
@@ -63,23 +63,23 @@ export function SlideVisualPreview({
           <button
             type="button"
             onClick={onEditInList}
-            className="px-3 py-1.5 text-xs font-medium text-[#8B1E24] hover:bg-[#8B1E24]/5 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="px-2.5 sm:px-3 py-1.5 text-xs font-medium text-[#8B1E24] hover:bg-[#8B1E24]/5 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
           >
             Kembali ke Daftar Kartu
           </button>
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+      <div className="mt-6 grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full min-w-0">
         {/* 4:5 Vertical Card Frame with generous symmetrical margins */}
-        <div className="xl:col-span-7 flex flex-col items-center">
+        <div className="w-full min-w-0 xl:col-span-7 flex flex-col items-center">
           <div
-            className="w-full max-w-[400px] aspect-[4/5] bg-[#FDFBF7] border border-[#DDD2C4] rounded-lg px-9 py-7 flex flex-col justify-between relative overflow-hidden"
+            className="w-full max-w-[400px] aspect-[4/5] bg-[#FDFBF7] border border-[#DDD2C4] rounded-lg px-5 sm:px-9 py-5 sm:py-7 flex flex-col justify-between relative overflow-hidden"
             aria-label={`Mockup 4:5 ${pageText}`}
           >
             {showSafeZones && (
               <div
-                className="pointer-events-none absolute inset-y-5 inset-x-8 border border-dashed border-[#8B1E24]/25 rounded"
+                className="pointer-events-none absolute inset-y-4 sm:inset-y-5 inset-x-4 sm:inset-x-8 border border-dashed border-[#8B1E24]/25 rounded"
                 aria-hidden="true"
               />
             )}
@@ -193,7 +193,7 @@ export function SlideVisualPreview({
         </div>
 
         {/* Prompt Details Side Column */}
-        <div className="xl:col-span-5 space-y-4">
+        <div className="w-full min-w-0 xl:col-span-5 space-y-4">
           <div>
             <h4 className="text-sm font-semibold text-[#1C1615]">
               Spesifikasi Komposisi ({pageText})
@@ -203,13 +203,13 @@ export function SlideVisualPreview({
             </p>
           </div>
 
-          <div className="bg-[#FAF6EF] border border-[#E6DDD1] rounded-lg p-3.5">
+          <div className="w-full min-w-0 bg-[#FAF6EF] border border-[#E6DDD1] rounded-lg p-3.5">
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="text-xs font-medium text-[#5C4F4D]">Image Prompt</span>
               <button
                 type="button"
                 onClick={handleCopyPrompt}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer shrink-0 ${
                   copiedPrompt
                     ? "bg-[#15803D] text-white"
                     : "bg-[#8B1E24] text-[#FDFBF7] hover:bg-[#72171C]"
@@ -228,9 +228,11 @@ export function SlideVisualPreview({
                 )}
               </button>
             </div>
-            <p className="font-mono text-[11.5px] leading-relaxed text-[#382F2D] select-all whitespace-pre-line">
-              {slide.image_prompt}
-            </p>
+            <div className="max-h-[156px] overflow-y-auto prompt-scrollbar pr-1">
+              <p className="font-mono text-[11.5px] leading-relaxed text-[#382F2D] break-words [overflow-wrap:anywhere] select-all whitespace-pre-line">
+                {slide.image_prompt}
+              </p>
+            </div>
           </div>
         </div>
       </div>

@@ -222,6 +222,88 @@ export async function fetchUserInfo(accessToken: string): Promise<{ email: strin
   return data;
 }
 
+export interface SpreadsheetAccessCheckResult {
+  hasEditorAccess: boolean;
+  status?: number;
+  reason?: "missing_token" | "forbidden_or_not_found";
+  message?: string;
+}
+
+export async function verifySpreadsheetEditorAccess(
+  accessToken: string
+): Promise<SpreadsheetAccessCheckResult> {
+  if (!accessToken) {
+    return {
+      hasEditorAccess: false,
+      status: 401,
+      reason: "missing_token",
+      message: "Access Token Google tidak ditemukan.",
+    };
+  }
+
+  // Langkah A (Cek Baca)
+  const readRes = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}?fields=spreadsheetId`,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+
+  if (readRes.status === 403 || readRes.status === 404) {
+    return {
+      hasEditorAccess: false,
+      status: readRes.status,
+      reason: "forbidden_or_not_found",
+      message: "Akun Google belum memiliki akses baca ke database spreadsheet.",
+    };
+  }
+
+  if (!readRes.ok) {
+    const errData = await readRes.json().catch(() => ({}));
+    throw new Error(
+      errData?.error?.message ||
+        `Gagal memverifikasi akses baca spreadsheet (HTTP ${readRes.status})`
+    );
+  }
+
+  // Langkah B (Cek Tulis / Editor menggunakan sel kosong jauh di luar tabel)
+  const writeRes = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchClear`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ranges: ["Users!Z999"] }),
+    }
+  );
+
+  if (writeRes.status === 403 || writeRes.status === 404) {
+    return {
+      hasEditorAccess: false,
+      status: writeRes.status,
+      reason: "forbidden_or_not_found",
+      message:
+        "Akun Google hanya memiliki akses Viewer atau belum terdaftar sebagai Editor pada database spreadsheet.",
+    };
+  }
+
+  if (!writeRes.ok) {
+    const errData = await writeRes.json().catch(() => ({}));
+    throw new Error(
+      errData?.error?.message ||
+        `Gagal memverifikasi izin Editor spreadsheet (HTTP ${writeRes.status})`
+    );
+  }
+
+  return {
+    hasEditorAccess: true,
+    status: writeRes.status,
+  };
+}
+
 export async function syncUserLoginToSheets(
   accessToken: string,
   email: string,
