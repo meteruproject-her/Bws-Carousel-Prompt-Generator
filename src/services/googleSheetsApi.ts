@@ -276,7 +276,7 @@ export async function verifySpreadsheetEditorAccess(
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ ranges: ["Users!Z999"] }),
+      body: JSON.stringify({ ranges: ["Users!J1000"] }),
     }
   );
 
