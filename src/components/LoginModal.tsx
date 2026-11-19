@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ShieldCheck, Database, User, ArrowRight, RefreshCw } from "lucide-react";
 import { fetchUserInfo, syncUserLoginToSheets, type UserSession } from "../services/googleSheetsApi";
 
@@ -26,11 +26,107 @@ declare global {
   }
 }
 
+const GSI_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
+
+function isOAuth2Available(): boolean {
+  return Boolean(window.google?.accounts?.oauth2);
+}
+
+function injectGsiScript(forceReplace = false): void {
+  const existing = document.querySelector<HTMLScriptElement>(
+    `script[src^="${GSI_SCRIPT_SRC}"]`
+  );
+
+  if (existing) {
+    if (!forceReplace) return;
+    existing.remove();
+  }
+
+  const script = document.createElement("script");
+  script.src = GSI_SCRIPT_SRC;
+  script.async = true;
+  script.defer = true;
+  document.head.appendChild(script);
+}
+
 export function LoginModal({ isOpen, onLoginSuccess, savedSession }: LoginModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGsiReady, setIsGsiReady] = useState<boolean>(() => isOAuth2Available());
+  const [gsiLoadTimedOut, setGsiLoadTimedOut] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (isOAuth2Available()) {
+      setIsGsiReady(true);
+      setGsiLoadTimedOut(false);
+      return;
+    }
+
+    setIsGsiReady(false);
+    setGsiLoadTimedOut(false);
+
+    // Ensure script exists immediately if missing or if user requested retry
+    injectGsiScript(reloadNonce > 0);
+
+    let elapsed = 0;
+    let retriedOnce = false;
+    const POLL_MS = 300;
+    const MAX_MS = 10000;
+
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      `script[src^="${GSI_SCRIPT_SRC}"]`
+    );
+
+    const handleScriptLoad = () => {
+      if (isOAuth2Available()) {
+        setIsGsiReady(true);
+        setGsiLoadTimedOut(false);
+      }
+    };
+
+    const handleScriptError = () => {
+      if (!retriedOnce) {
+        retriedOnce = true;
+        injectGsiScript(true);
+      }
+    };
+
+    existingScript?.addEventListener("load", handleScriptLoad);
+    existingScript?.addEventListener("error", handleScriptError);
+
+    const intervalId = window.setInterval(() => {
+      if (isOAuth2Available()) {
+        setIsGsiReady(true);
+        setGsiLoadTimedOut(false);
+        window.clearInterval(intervalId);
+        return;
+      }
+
+      elapsed += POLL_MS;
+
+      // On iOS Chrome/Safari, an initial async script can occasionally stall; re-inject once at ~3s
+      if (elapsed >= 3000 && !retriedOnce) {
+        retriedOnce = true;
+        injectGsiScript(true);
+      }
+
+      if (elapsed >= MAX_MS) {
+        window.clearInterval(intervalId);
+        setGsiLoadTimedOut(true);
+      }
+    }, POLL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+      existingScript?.removeEventListener("load", handleScriptLoad);
+      existingScript?.removeEventListener("error", handleScriptError);
+    };
+  }, [isOpen, reloadNonce]);
 
   if (!isOpen) return null;
 
@@ -41,14 +137,15 @@ export function LoginModal({ isOpen, onLoginSuccess, savedSession }: LoginModalP
       return;
     }
 
-    if (!window.google?.accounts?.oauth2) {
-      setError("Pustaka Google Identity Services belum dimuat. Pastikan terhubung ke internet.");
+    if (!isOAuth2Available()) {
+      setIsGsiReady(false);
+      setReloadNonce((n) => n + 1);
       return;
     }
 
     setIsLoading(true);
     try {
-      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      const tokenClient = window.google!.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: "openid email profile https://www.googleapis.com/auth/spreadsheets",
         callback: async (tokenResponse) => {
@@ -72,18 +169,20 @@ export function LoginModal({ isOpen, onLoginSuccess, savedSession }: LoginModalP
               userInfo.email,
               userInfo.name || userInfo.email.split("@")[0],
               userInfo.picture,
-              true // forceUpdate on manual user login action
+              true
             );
             onLoginSuccess(session);
           } catch (err: any) {
-            setError("Gagal memuat profil atau menyinkronkan Google Sheets: " + (err?.message || "Kesalahan jaringan"));
+            setError(
+              "Gagal memuat profil atau menyinkronkan Google Sheets: " +
+                (err?.message || "Kesalahan jaringan")
+            );
           } finally {
             setIsLoading(false);
           }
         },
       });
 
-      // Always use prompt: "select_account" instead of "consent" to avoid repeated permission prompts
       tokenClient.requestAccessToken({
         prompt: "select_account",
         hint: hintEmail || undefined,
@@ -94,26 +193,8 @@ export function LoginModal({ isOpen, onLoginSuccess, savedSession }: LoginModalP
     }
   };
 
-  const handleDemoLogin = async () => {
-    setError(null);
-    setIsLoading(true);
-    try {
-      const session = await syncUserLoginToSheets(
-        "",
-        "staf.paser@bawaslu.go.id",
-        "Staf Pengawas Bawaslu Paser",
-        undefined,
-        true
-      );
-      onLoginSuccess(session);
-    } catch (err: any) {
-      setError(err?.message || "Gagal masuk sesi demo.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const hasSavedUser = Boolean(savedSession?.email);
+  const isButtonDisabled = !isGsiReady || isLoading;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -137,6 +218,7 @@ export function LoginModal({ isOpen, onLoginSuccess, savedSession }: LoginModalP
                 <img
                   src={savedSession.avatar}
                   alt={savedSession.nama_staf}
+                  referrerPolicy="no-referrer"
                   className="w-11 h-11 rounded-full object-cover border border-[#8B1E24]/20 shrink-0"
                 />
               ) : (
@@ -162,11 +244,16 @@ export function LoginModal({ isOpen, onLoginSuccess, savedSession }: LoginModalP
           {hasSavedUser && savedSession ? (
             <button
               type="button"
-              disabled={isLoading}
+              disabled={isButtonDisabled}
               onClick={() => handleGoogleAuth(savedSession.email)}
-              className="w-full py-3 px-4 bg-[#8B1E24] hover:bg-[#72181d] text-white font-medium rounded-lg text-sm shadow-md transition flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer"
+              className="w-full py-3 px-4 bg-[#8B1E24] hover:bg-[#72181d] text-white font-medium rounded-lg text-sm shadow-md transition flex items-center justify-center gap-2.5 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
-              {isLoading ? (
+              {!isGsiReady ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Menyiapkan layanan Google...</span>
+                </>
+              ) : isLoading ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
                   <span>Memperbarui Sesi...</span>
@@ -181,11 +268,16 @@ export function LoginModal({ isOpen, onLoginSuccess, savedSession }: LoginModalP
           ) : (
             <button
               type="button"
-              disabled={isLoading}
+              disabled={isButtonDisabled}
               onClick={() => handleGoogleAuth()}
-              className="w-full py-3 px-4 bg-white hover:bg-gray-50 border border-gray-300 text-gray-800 font-medium rounded-lg text-sm shadow-sm transition flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer"
+              className="w-full py-3 px-4 bg-white hover:bg-gray-50 border border-gray-300 text-gray-800 font-medium rounded-lg text-sm shadow-sm transition flex items-center justify-center gap-3 disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              {isLoading ? (
+              {!isGsiReady ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-[#8B1E24]" />
+                  <span className="text-gray-600">Menyiapkan layanan Google...</span>
+                </>
+              ) : isLoading ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin text-[#8B1E24]" />
                   <span>Menghubungkan...</span>
@@ -221,29 +313,26 @@ export function LoginModal({ isOpen, onLoginSuccess, savedSession }: LoginModalP
               <button
                 type="button"
                 onClick={() => handleGoogleAuth()}
-                disabled={isLoading}
-                className="text-xs text-[#8B1E24] hover:underline font-medium cursor-pointer"
+                disabled={isButtonDisabled}
+                className="text-xs text-[#8B1E24] hover:underline font-medium disabled:opacity-50 cursor-pointer"
               >
                 Gunakan Akun Google Lain
               </button>
             </div>
           )}
 
-          <div className="relative flex py-1 items-center">
-            <div className="flex-grow border-t border-gray-200"></div>
-            <span className="flex-shrink mx-4 text-gray-400 text-xs uppercase font-mono">Atau</span>
-            <div className="flex-grow border-t border-gray-200"></div>
-          </div>
-
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={handleDemoLogin}
-            className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg text-xs transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-          >
-            <User className="w-3.5 h-3.5 text-gray-500" />
-            <span>Masuk Cepat Demo / Pengujian Lokal</span>
-          </button>
+          {!isGsiReady && gsiLoadTimedOut && (
+            <div className="p-3 bg-[#FAF6EF] border border-[#E6DDD1] text-[#5C4F4D] text-xs rounded-lg flex items-center justify-between gap-2">
+              <span>Layanan Google memerlukan waktu lebih lama untuk dimuat.</span>
+              <button
+                type="button"
+                onClick={() => setReloadNonce((n) => n + 1)}
+                className="text-[#8B1E24] font-semibold hover:underline whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                Muat Ulang
+              </button>
+            </div>
+          )}
 
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-start gap-2">

@@ -15,7 +15,6 @@ import {
   User,
   FolderOpen,
   LogOut,
-  Database,
   Save,
 } from "lucide-react";
 import { CompositionRulesDrawer } from "./components/CompositionRulesDrawer";
@@ -117,8 +116,13 @@ function loadStoredRules(): CompositionRules {
 
 export default function App() {
   const [session, setSession] = useState<UserSession | null>(() => getStoredSession());
+  const [avatarLoadError, setAvatarLoadError] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(!getStoredSession());
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    setAvatarLoadError(false);
+  }, [session?.avatar]);
 
   useEffect(() => {
     const handleAuthRequired = () => {
@@ -566,13 +570,6 @@ export default function App() {
             </button>
             <button
               type="button"
-              onClick={() => handleLoadPreset(SOURCE_PRESETS[0].text)}
-              className="hover:text-[#8B1E24] hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              Contoh Siaran Pers
-            </button>
-            <button
-              type="button"
               onClick={() => setIsRulesDrawerOpen(true)}
               className="hover:text-[#8B1E24] hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
@@ -580,61 +577,82 @@ export default function App() {
             </button>
           </nav>
 
-          {/* Zone 3: User Session & Actions */}
-          <div className="flex items-center gap-3 shrink-0">
-            {session && (
-              <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-[#FAF6EF] border border-[#E6DDD1] rounded-lg text-xs">
-                <span className="w-2 h-2 rounded-full bg-green-600 animate-pulse"></span>
-                <span className="font-medium text-gray-800 truncate max-w-[140px]" title={session.email}>
-                  {session.nama_staf || session.email}
-                </span>
-                <span className="text-gray-400">|</span>
-                <span className="font-mono text-[#8B1E24] font-semibold" title="Total generate carousel">
-                  {session.jumlah_generate} Gen
-                </span>
-              </div>
-            )}
-
+          {/* Zone 3: Google Account Profile & Actions */}
+          <div className="flex items-center gap-2.5 shrink-0">
             <button
               type="button"
               onClick={() => setIsHistoryDrawerOpen(true)}
-              className="md:hidden p-2 text-gray-700 hover:text-[#8B1E24] bg-[#FAF6EF] rounded-lg transition"
+              className="md:hidden p-2 text-[#5C4F4D] hover:text-[#8B1E24] bg-[#FAF6EF] border border-[#E6DDD1] rounded-lg transition cursor-pointer"
               title="Riwayat Tersimpan"
             >
               <FolderOpen className="w-4 h-4" />
             </button>
 
-            {session && (
-              <button
-                type="button"
-                onClick={() => {
-                  clearStoredSession();
-                  setSession(null);
-                  setIsLoginModalOpen(true);
-                }}
-                className="p-2 text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition cursor-pointer"
-                title="Keluar / Ganti Akun"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            )}
-
-            {blueprint ? (
+            {blueprint && (
               <button
                 type="button"
                 onClick={handleResetWorkspace}
                 className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#1C1615] bg-[#F3ECE1] hover:bg-[#EAE0D0] rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                title="Mulai naskah baru"
               >
                 <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
-                <span className="hidden sm:inline">Reset Studio</span>
+                <span className="hidden lg:inline">Reset Studio</span>
               </button>
+            )}
+
+            {session ? (
+              <div className="flex items-center gap-2.5 pl-2 pr-1.5 py-1 bg-white border border-[#E6DDD1] rounded-xl shadow-2xs">
+                {session.avatar && !avatarLoadError ? (
+                  <img
+                    src={session.avatar}
+                    alt={session.nama_staf || session.email}
+                    onError={() => setAvatarLoadError(true)}
+                    referrerPolicy="no-referrer"
+                    className="w-7 h-7 rounded-full object-cover border border-[#DDD2C4] shrink-0"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-[#8B1E24]/10 text-[#8B1E24] flex items-center justify-center shrink-0">
+                    <User className="w-3.5 h-3.5" aria-hidden="true" />
+                  </div>
+                )}
+
+                <div className="hidden sm:flex flex-col text-left leading-tight min-w-0">
+                  <span
+                    className="text-xs font-semibold text-[#1C1615] truncate max-w-[140px]"
+                    title={session.nama_staf || session.email}
+                  >
+                    {session.nama_staf || session.email.split("@")[0]}
+                  </span>
+                  <span
+                    className="text-[10.5px] text-[#6B5D5A] truncate max-w-[140px]"
+                    title={session.email}
+                  >
+                    {session.email}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearStoredSession();
+                    setSession(null);
+                    setIsLoginModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-[#8B1E24] bg-[#FAF6EF] hover:bg-[#8B1E24] hover:text-[#FDFBF7] border border-[#E6DDD1] rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                  title="Keluar dari akun Google"
+                >
+                  <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Keluar</span>
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
-                onClick={() => handleLoadPreset(SOURCE_PRESETS[0].text)}
-                className="px-4 py-2 text-xs font-semibold text-[#FDFBF7] bg-[#8B1E24] hover:bg-[#72171C] rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                onClick={() => setIsLoginModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#FDFBF7] bg-[#8B1E24] hover:bg-[#72171C] rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
-                Muat Contoh Teks
+                <User className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Masuk Google</span>
               </button>
             )}
           </div>
@@ -688,40 +706,25 @@ export default function App() {
 
             <form onSubmit={handleGenerate} className="space-y-5">
               <div>
-                <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center justify-between gap-2 mb-2.5">
                   <label
                     htmlFor="raw-source-text"
                     className="text-sm font-semibold text-[#1C1615]"
                   >
                     Teks Sumber (Berita, Siaran Pers, atau Regulasi)
                   </label>
-                  {rawText && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRawText("");
-                        setErrorMsg(null);
-                      }}
-                      className="text-xs font-medium text-[#6B5D5A] hover:text-[#8B1E24] transition-colors cursor-pointer"
-                    >
-                      Bersihkan
-                    </button>
-                  )}
-                </div>
-
-                {/* Sample Preset Quick Loaders */}
-                <div className="flex flex-wrap items-center gap-1.5 mb-3">
-                  <span className="text-xs text-[#6B5D5A] mr-1">Contoh cepat:</span>
-                  {SOURCE_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => handleLoadPreset(preset.text)}
-                      className="px-2.5 py-1 text-xs font-medium text-[#4A3F3D] bg-[#FAF6EF] hover:bg-[#F3ECE1] border border-[#E6DDD1] rounded-md transition-colors whitespace-nowrap cursor-pointer"
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    disabled={!rawText}
+                    onClick={() => {
+                      setRawText("");
+                      setErrorMsg(null);
+                      textareaRef.current?.focus();
+                    }}
+                    className="text-xs font-medium text-[#6B5D5A] hover:text-[#8B1E24] disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer shrink-0"
+                  >
+                    Bersihkan
+                  </button>
                 </div>
 
                 <textarea

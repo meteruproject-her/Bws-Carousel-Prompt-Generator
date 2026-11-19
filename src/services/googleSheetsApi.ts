@@ -53,6 +53,26 @@ export function clearStoredSession() {
 
 let activeTokenRefreshPromise: Promise<string> | null = null;
 
+async function waitForGsiOAuth2(timeoutMs = 8000): Promise<boolean> {
+  if (window.google?.accounts?.oauth2) return true;
+
+  const src = "https://accounts.google.com/gsi/client";
+  if (!document.querySelector(`script[src^="${src}"]`)) {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+  }
+
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    await new Promise((r) => setTimeout(r, 250));
+    if (window.google?.accounts?.oauth2) return true;
+  }
+  return Boolean(window.google?.accounts?.oauth2);
+}
+
 export function requestNewAccessToken(
   savedEmail?: string,
   interactive = false
@@ -61,22 +81,22 @@ export function requestNewAccessToken(
     return activeTokenRefreshPromise;
   }
 
-  activeTokenRefreshPromise = new Promise((resolve, reject) => {
+  activeTokenRefreshPromise = (async () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
     if (!clientId) {
       activeTokenRefreshPromise = null;
-      reject(new Error("VITE_GOOGLE_CLIENT_ID belum diatur"));
-      return;
+      throw new Error("VITE_GOOGLE_CLIENT_ID belum diatur");
     }
 
-    if (!window.google?.accounts?.oauth2) {
+    const ready = await waitForGsiOAuth2(8000);
+    if (!ready || !window.google?.accounts?.oauth2) {
       activeTokenRefreshPromise = null;
-      reject(new Error("Pustaka Google Identity Services belum dimuat"));
-      return;
+      throw new Error("Pustaka Google Identity Services belum dimuat");
     }
 
-    try {
-      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+    return new Promise<string>((resolve, reject) => {
+      try {
+        const tokenClient = window.google!.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: "openid email profile https://www.googleapis.com/auth/spreadsheets",
         callback: (tokenResponse: any) => {
@@ -121,7 +141,8 @@ export function requestNewAccessToken(
       activeTokenRefreshPromise = null;
       reject(err);
     }
-  });
+    });
+  })();
 
   return activeTokenRefreshPromise;
 }
