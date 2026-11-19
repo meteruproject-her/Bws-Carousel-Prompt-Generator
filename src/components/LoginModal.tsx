@@ -88,27 +88,6 @@ function injectGsiScript(forceReplace = false): void {
   document.head.appendChild(script);
 }
 
-async function copyTextToClipboard(text: string): Promise<void> {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return;
-    }
-  } catch {
-    // Fall back to execCommand below
-  }
-
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.style.position = "fixed";
-  textarea.style.opacity = "0";
-  document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
-  document.execCommand("copy");
-  document.body.removeChild(textarea);
-}
-
 export function LoginModal({ isOpen, onLoginSuccess, savedSession }: LoginModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [recheckNotice, setRecheckNotice] = useState<string | null>(null);
@@ -301,12 +280,8 @@ export function LoginModal({ isOpen, onLoginSuccess, savedSession }: LoginModalP
     }
   };
 
-  const handleRequestEditorAccess = async () => {
+  const handleRequestEditorAccess = () => {
     if (!pendingUser || hasRequestedAccess) return;
-
-    const requestMessage =
-      "Halo Admin BWS Carousel Engine, mohon berikan akses Editor spreadsheet database untuk akun Google saya: " +
-      pendingUser.email;
 
     try {
       localStorage.setItem(
@@ -317,10 +292,14 @@ export function LoginModal({ isOpen, onLoginSuccess, savedSession }: LoginModalP
       // Ignore storage errors
     }
 
-    await copyTextToClipboard(requestMessage);
+    window.open(
+      "https://docs.google.com/spreadsheets/d/17Qj-DHRv4CRMKXKwfGtWXouYn6LJoyOczeVL2ZXG7oU/edit",
+      "_blank",
+      "noopener,noreferrer"
+    );
+
     setHasRequestedAccess(true);
     setRecheckNotice(null);
-    showToast("Pesan permohonan & email berhasil disalin ke clipboard", "success");
   };
 
   const handleRecheckEditorAccess = async () => {
@@ -474,14 +453,14 @@ export function LoginModal({ isOpen, onLoginSuccess, savedSession }: LoginModalP
                 <div className="flex items-center gap-2 text-[#065F46]">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <h3 className="text-sm font-bold">
-                    Berhasil Meminta Akses Editor
+                    Permintaan Akses Editor Diajukan
                   </h3>
                 </div>
                 <p className="text-xs leading-relaxed text-[#047857]">
-                  Permintaan akses Anda telah dicatat (pesan permohonan beserta email
-                  Anda sudah disalin ke clipboard). Silakan tunggu persetujuan Admin
-                  dan segera hubungi Admin untuk mengaktifkan akses Editor bagi akun
-                  Anda. Anda tidak dapat mengirim permintaan akses ulang.
+                  Silakan klik tombol &apos;Minta akses&apos; pada tab Google Sheets yang
+                  baru terbuka agar notifikasi resmi masuk ke email Admin, lalu tunggu
+                  persetujuan Admin. Anda tidak dapat mengirim permintaan ulang dari
+                  halaman ini.
                 </p>
               </div>
 
