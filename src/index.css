@@ -36,3 +36,26 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #8B1E24;
 }
+
+.prompt-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #D6C9BC #F6F1E9;
+}
+
+.prompt-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.prompt-scrollbar::-webkit-scrollbar-track {
+  background: #F3ECE1;
+  border-radius: 9999px;
+}
+
+.prompt-scrollbar::-webkit-scrollbar-thumb {
+  background: #CFC0B0;
+  border-radius: 9999px;
+}
+
+.prompt-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #8B1E24;
+}

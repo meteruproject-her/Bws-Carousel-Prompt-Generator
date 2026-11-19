@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   Check,
   Copy,
   Loader2,
+  Maximize2,
   Pencil,
   RefreshCw,
   RotateCcw,
   Sparkles,
 } from "lucide-react";
-import type { CompositionRules } from "../constants/defaultRules.ts";
-import type { CarouselSlide } from "../types/carousel.ts";
-import { buildLockedImagePrompt } from "../utils/promptBuilder.ts";
+import type { CompositionRules } from "../constants/defaultRules";
+import type { CarouselSlide } from "../types/carousel";
+import { buildLockedImagePrompt } from "../utils/promptBuilder";
+import { FullScreenTextModal } from "./FullScreenTextModal";
 
 interface SlideCardProps {
   slide: CarouselSlide;
@@ -49,6 +51,32 @@ export function SlideCard({
   const [regenError, setRegenError] = useState<string | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [copiedSlideText, setCopiedSlideText] = useState(false);
+  const [modalField, setModalField] = useState<"headline" | "body" | "prompt" | null>(
+    null
+  );
+  const [showBottomFade, setShowBottomFade] = useState(false);
+  const promptScrollRef = useRef<HTMLDivElement>(null);
+
+  const updateScrollFade = useCallback(() => {
+    const el = promptScrollRef.current;
+    if (!el) {
+      setShowBottomFade(false);
+      return;
+    }
+    const hasOverflow = el.scrollHeight > el.clientHeight + 2;
+    const isAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 8;
+    setShowBottomFade(hasOverflow && !isAtBottom);
+  }, []);
+
+  useEffect(() => {
+    updateScrollFade();
+    const el = promptScrollRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(() => updateScrollFade());
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [slide.image_prompt, updateScrollFade]);
 
   const pageIndicator =
     slide.pagination_text || `Slide ${index + 1} dari ${totalSlides}`;
@@ -389,6 +417,19 @@ export function SlideCard({
                 id={`headline-${slide.id}`}
                 type="text"
                 value={slide.headline}
+                onFocus={(e) => {
+                  if (window.innerWidth < 1024) {
+                    e.preventDefault();
+                    e.target.blur();
+                    setModalField("headline");
+                  }
+                }}
+                onClick={(e) => {
+                  if (window.innerWidth < 1024) {
+                    e.preventDefault();
+                    setModalField("headline");
+                  }
+                }}
                 onChange={(e) => handleHeadlineChange(e.target.value)}
                 className="w-full px-3.5 py-2.5 text-[16px] font-display font-semibold text-[#1C1615] bg-[#FDFBF7] border border-[#D4C5B4] rounded-lg focus:outline-none focus:border-[#8B1E24] focus:ring-2 focus:ring-[#8B1E24]/15"
               />
@@ -414,8 +455,21 @@ export function SlideCard({
                 id={`body-${slide.id}`}
                 rows={3}
                 value={slide.body_copy}
+                onFocus={(e) => {
+                  if (window.innerWidth < 1024) {
+                    e.preventDefault();
+                    e.target.blur();
+                    setModalField("body");
+                  }
+                }}
+                onClick={(e) => {
+                  if (window.innerWidth < 1024) {
+                    e.preventDefault();
+                    setModalField("body");
+                  }
+                }}
                 onChange={(e) => handleBodyChange(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm leading-relaxed text-[#1C1615] bg-[#FDFBF7] border border-[#D4C5B4] rounded-lg focus:outline-none focus:border-[#8B1E24] focus:ring-2 focus:ring-[#8B1E24]/15 resize-y"
+                className="w-full px-3.5 py-2.5 text-[16px] leading-relaxed text-[#1C1615] bg-[#FDFBF7] border border-[#D4C5B4] rounded-lg focus:outline-none focus:border-[#8B1E24] focus:ring-2 focus:ring-[#8B1E24]/15 resize-y"
               />
             </div>
 
@@ -468,10 +522,10 @@ export function SlideCard({
         )}
       </div>
 
-      {/* Image Prompt Box */}
+      {/* Image Prompt Box (Bounded height + vertical scroll, actions stay outside scroll) */}
       <div className="mt-5 pt-4 border-t border-[#EFE8DE]">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-          <div className="flex items-center gap-2 text-xs text-[#5C4F4D]">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C4F4D]">
             <span className="font-medium">
               Image Prompt Terpadu · 4:5 Comic / Anime + Tata Letak &amp; Teks
             </span>
@@ -481,35 +535,112 @@ export function SlideCard({
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={handleCopyPrompt}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              copiedPrompt
-                ? "bg-[#15803D] text-white"
-                : "bg-[#8B1E24] text-[#FDFBF7] hover:bg-[#72171C]"
-            }`}
-          >
-            {copiedPrompt ? (
-              <>
-                <Check className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>Prompt Tersalin</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>Copy Image Prompt</span>
-              </>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {slide.isManualPrompt && slide.illustration_scene && (
+              <button
+                type="button"
+                onClick={handleResyncPrompt}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-[#8B1E24] hover:bg-[#F3ECE1] rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                title="Kembalikan prompt agar sinkron otomatis dengan pengaturan & teks slide"
+              >
+                <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Auto-Sync</span>
+              </button>
             )}
-          </button>
+
+            <button
+              type="button"
+              onClick={() => setModalField("prompt")}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[#4A3F3D] bg-[#FAF6EF] hover:bg-[#F3ECE1] hover:text-[#1C1615] border border-[#DDD2C4] rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              title="Buka Full-Screen Editor untuk melihat atau mengedit prompt secara penuh"
+            >
+              <Maximize2 className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Editor Penuh</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCopyPrompt}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                copiedPrompt
+                  ? "bg-[#15803D] text-white"
+                  : "bg-[#8B1E24] text-[#FDFBF7] hover:bg-[#72171C]"
+              }`}
+            >
+              {copiedPrompt ? (
+                <>
+                  <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Prompt Tersalin</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Salin Prompt</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
-        <div className="bg-[#FAF6EF] border border-[#E6DDD1] rounded-lg p-3.5">
-          <p className="font-mono text-[12px] leading-[1.65] text-[#382F2D] break-words select-all whitespace-pre-line">
-            {slide.image_prompt}
-          </p>
+        <div className="relative bg-[#FAF6EF] border border-[#E6DDD1] rounded-lg overflow-hidden">
+          <div
+            ref={promptScrollRef}
+            onScroll={updateScrollFade}
+            className="max-h-[156px] overflow-y-auto prompt-scrollbar p-3.5 pr-3"
+          >
+            <p className="font-mono text-[12px] leading-[1.65] text-[#382F2D] break-words select-all whitespace-pre-line">
+              {slide.image_prompt}
+            </p>
+          </div>
+
+          <div
+            aria-hidden="true"
+            className={`pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#FAF6EF] via-[#FAF6EF]/85 to-transparent transition-opacity duration-200 ${
+              showBottomFade ? "opacity-100" : "opacity-0"
+            }`}
+          />
         </div>
       </div>
+
+      {modalField && (
+        <FullScreenTextModal
+          isOpen={Boolean(modalField)}
+          title={
+            modalField === "headline"
+              ? `Slide ${index + 1}: Edit Headline (Maks. 4–6 Kata)`
+              : modalField === "body"
+              ? `Slide ${index + 1}: Edit Body Copy (Maks. 18–24 Kata)`
+              : `Slide ${index + 1}: Editor Layar Penuh Image Prompt`
+          }
+          initialValue={
+            modalField === "headline"
+              ? slide.headline
+              : modalField === "body"
+              ? slide.body_copy
+              : slide.image_prompt
+          }
+          placeholder={
+            modalField === "headline"
+              ? "Ketik headline ringkas (4-6 kata)..."
+              : modalField === "body"
+              ? "Ketik isi teks body copy (18-24 kata)..."
+              : "Ketik atau sesuaikan Unified Image Prompt..."
+          }
+          onSave={(val) => {
+            if (modalField === "headline") handleHeadlineChange(val);
+            if (modalField === "body") handleBodyChange(val);
+            if (modalField === "prompt") {
+              onUpdate(slide.id, {
+                image_prompt: val,
+                isEdited: true,
+                isManualPrompt: true,
+              });
+            }
+            setModalField(null);
+          }}
+          onClose={() => setModalField(null)}
+        />
+      )}
     </article>
   );
 }

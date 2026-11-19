@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   AlertCircle,
   Check,
@@ -12,8 +12,18 @@ import {
   RotateCcw,
   Settings,
   Sparkles,
+  User,
+  FolderOpen,
+  LogOut,
+  Database,
+  Save,
 } from "lucide-react";
 import { CompositionRulesDrawer } from "./components/CompositionRulesDrawer";
+import { FullScreenTextModal } from "./components/FullScreenTextModal";
+import { LoginModal } from "./components/LoginModal";
+import { HistoryDrawer } from "./components/HistoryDrawer";
+import { ToastContainer } from "./components/ToastContainer";
+import { showToast } from "./utils/toast";
 import { SlideCard } from "./components/SlideCard";
 import { SlideVisualPreview } from "./components/SlideVisualPreview";
 import {
@@ -21,15 +31,23 @@ import {
   LEGACY_DEFAULT_COMPOSITION_RULES,
   countCustomizedRules,
   type CompositionRules,
-} from "./constants/defaultRules.ts";
+} from "./constants/defaultRules";
 import {
   GEMINI_MODEL_OPTIONS,
   resolveGeminiModel,
   type GeminiModelId,
-} from "./constants/geminiModels.ts";
+} from "./constants/geminiModels";
 import { SOURCE_PRESETS } from "./data/presets";
-import type { CarouselBlueprint, CarouselSlide } from "./types/carousel.ts";
-import { buildLockedImagePrompt } from "./utils/promptBuilder.ts";
+import type { CarouselBlueprint, CarouselSlide } from "./types/carousel";
+import { buildLockedImagePrompt } from "./utils/promptBuilder";
+import {
+  trackGenerateInSheets as trackGenerate,
+  saveBlueprintToSheets as saveBlueprint,
+  getStoredSession,
+  clearStoredSession,
+  type UserSession,
+  type BlueprintRecord,
+} from "./services/googleSheetsApi";
 
 type SlideCountMode = "auto" | "exact";
 type OutputView = "cards" | "preview";
@@ -98,6 +116,34 @@ function loadStoredRules(): CompositionRules {
 }
 
 export default function App() {
+  const [session, setSession] = useState<UserSession | null>(() => getStoredSession());
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(!getStoredSession());
+  const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleAuthRequired = () => {
+      setIsLoginModalOpen(true);
+    };
+    const handleSessionUpdated = () => {
+      setSession(getStoredSession());
+    };
+    window.addEventListener("bws_auth_required", handleAuthRequired);
+    window.addEventListener("bws_session_updated", handleSessionUpdated);
+    return () => {
+      window.removeEventListener("bws_auth_required", handleAuthRequired);
+      window.removeEventListener("bws_session_updated", handleSessionUpdated);
+    };
+  }, []);
+
+  // Blueprint database metadata state
+  const [activeBlueprintId, setActiveBlueprintId] = useState<string | null>(null);
+  const [blueprintTitleInput, setBlueprintTitleInput] = useState("");
+  const [blueprintCategory, setBlueprintCategory] = useState<'Regulasi' | 'Pencegahan' | 'Pengawasan' | 'Kegiatan' | 'Edukasi Publik'>('Regulasi');
+  const [blueprintStatus, setBlueprintStatus] = useState<'Draft' | 'Siap Desain' | 'Sudah Tayang'>('Draft');
+  const [blueprintCreator, setBlueprintCreator] = useState(session?.nama_staf || "Staf Bawaslu");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveToast, setSaveToast] = useState<string | null>(null);
+
   const [rawText, setRawText] = useState("");
   const [slideCountMode, setSlideCountMode] = useState<SlideCountMode>("auto");
   const [slideCount, setSlideCount] = useState<number>(8);
@@ -109,6 +155,7 @@ export default function App() {
     loadStoredRules()
   );
   const [isRulesDrawerOpen, setIsRulesDrawerOpen] = useState(false);
+  const [isMainModalOpen, setIsMainModalOpen] = useState(false);
 
   const [blueprint, setBlueprint] = useState<CarouselBlueprint | null>(null);
   const [originalSlides, setOriginalSlides] = useState<Record<string, CarouselSlide>>({});
@@ -251,6 +298,19 @@ export default function App() {
       for (const s of slidesWithIds) {
         origMap[s.id] = { ...s };
       }
+
+      if (session) {
+        try {
+          const newCount = await trackGenerate(session);
+          setSession({ ...session, jumlah_generate: newCount });
+        } catch (e) {
+          console.error("Failed to track generate", e);
+        }
+      }
+
+      setActiveBlueprintId(null);
+      setBlueprintTitleInput(slidesWithIds[0]?.headline || data.title || "Blueprint Carousel");
+      setBlueprintCreator(session?.nama_staf || "Staf Bawaslu");
 
       setOriginalSlides(origMap);
       setBlueprint({
@@ -408,6 +468,67 @@ export default function App() {
     setOutputView("preview");
   }
 
+  function handleLoadBlueprintFromHistory(record: BlueprintRecord) {
+    setActiveBlueprintId(record.id);
+    setRawText(record.naskah_sumber || "");
+    setSelectedModel(resolveGeminiModel(record.model_ai));
+    setBlueprintTitleInput(record.judul_topik);
+    setBlueprintCategory(record.kategori);
+    setBlueprintStatus(record.status);
+    setBlueprintCreator(record.pembuat);
+
+    const bp = record.blueprint_json;
+    if (bp && Array.isArray(bp.slides)) {
+      const origMap: Record<string, CarouselSlide> = {};
+      for (const s of bp.slides) {
+        origMap[s.id] = { ...s };
+      }
+      setOriginalSlides(origMap);
+      setBlueprint(bp);
+    }
+    setOutputView("cards");
+    setPreviewIndex(0);
+  }
+
+  async function handleSaveBlueprintToDb(isDuplicate = false) {
+    if (!blueprint) return;
+    setIsSaving(true);
+    setSaveToast(null);
+    try {
+      const targetId = isDuplicate ? null : activeBlueprintId;
+      const isUpdate = Boolean(targetId);
+      const savedId = await saveBlueprint(session, {
+        id: targetId,
+        judul_topik: blueprintTitleInput || blueprint.title || "Tanpa Judul",
+        kategori: blueprintCategory,
+        status: blueprintStatus,
+        pembuat: blueprintCreator || session?.nama_staf || "Staf",
+        user_email: session?.email || "",
+        jumlah_slide: blueprint.slides.length,
+        model_ai: selectedModel,
+        naskah_sumber: rawText,
+        blueprint_json: blueprint,
+      });
+
+      setActiveBlueprintId(savedId);
+      if (isDuplicate) {
+        showToast("Berhasil menduplikat blueprint baru", "success");
+        setSaveToast("Berhasil menduplikat blueprint baru");
+      } else if (isUpdate) {
+        showToast("Perubahan tersimpan", "success");
+        setSaveToast("Perubahan tersimpan");
+      } else {
+        showToast("Blueprint berhasil disimpan", "success");
+        setSaveToast("Blueprint berhasil disimpan");
+      }
+      setTimeout(() => setSaveToast(null), 3000);
+    } catch (err: any) {
+      showToast("Gagal menyimpan blueprint: " + (err?.message || "Kesalahan jaringan"), "error");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#1C1615] flex flex-col">
       {/* Top Bar Contract: 3 zones separated by gap-8 */}
@@ -416,9 +537,12 @@ export default function App() {
           {/* Zone 1: Single-line brand wordmark */}
           <a
             href="#studio"
-            className="font-display text-lg font-bold tracking-tight text-[#1C1615] whitespace-nowrap shrink-0"
+            className="font-display text-lg font-bold tracking-tight text-[#1C1615] whitespace-nowrap shrink-0 flex items-center gap-2"
           >
-            BWS Carousel Engine
+            <span>BWS Carousel Engine</span>
+            <span className="text-[10px] bg-[#8B1E24]/10 text-[#8B1E24] px-2 py-0.5 rounded-full font-mono font-semibold">
+              Bawaslu Paser
+            </span>
           </a>
 
           {/* Zone 2: Clean single-line navigation links */}
@@ -432,6 +556,14 @@ export default function App() {
             >
               Workspace
             </a>
+            <button
+              type="button"
+              onClick={() => setIsHistoryDrawerOpen(true)}
+              className="hover:text-[#8B1E24] hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer flex items-center gap-1.5"
+            >
+              <FolderOpen className="w-4 h-4 text-[#8B1E24]" />
+              <span>Riwayat Tersimpan</span>
+            </button>
             <button
               type="button"
               onClick={() => handleLoadPreset(SOURCE_PRESETS[0].text)}
@@ -448,16 +580,53 @@ export default function App() {
             </button>
           </nav>
 
-          {/* Zone 3: Single primary/utility action */}
-          <div className="flex items-center shrink-0">
+          {/* Zone 3: User Session & Actions */}
+          <div className="flex items-center gap-3 shrink-0">
+            {session && (
+              <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-[#FAF6EF] border border-[#E6DDD1] rounded-lg text-xs">
+                <span className="w-2 h-2 rounded-full bg-green-600 animate-pulse"></span>
+                <span className="font-medium text-gray-800 truncate max-w-[140px]" title={session.email}>
+                  {session.nama_staf || session.email}
+                </span>
+                <span className="text-gray-400">|</span>
+                <span className="font-mono text-[#8B1E24] font-semibold" title="Total generate carousel">
+                  {session.jumlah_generate} Gen
+                </span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsHistoryDrawerOpen(true)}
+              className="md:hidden p-2 text-gray-700 hover:text-[#8B1E24] bg-[#FAF6EF] rounded-lg transition"
+              title="Riwayat Tersimpan"
+            >
+              <FolderOpen className="w-4 h-4" />
+            </button>
+
+            {session && (
+              <button
+                type="button"
+                onClick={() => {
+                  clearStoredSession();
+                  setSession(null);
+                  setIsLoginModalOpen(true);
+                }}
+                className="p-2 text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                title="Keluar / Ganti Akun"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
+
             {blueprint ? (
               <button
                 type="button"
                 onClick={handleResetWorkspace}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#1C1615] bg-[#F3ECE1] hover:bg-[#EAE0D0] rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#1C1615] bg-[#F3ECE1] hover:bg-[#EAE0D0] rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>Reset Studio</span>
+                <span className="hidden sm:inline">Reset Studio</span>
               </button>
             ) : (
               <button
@@ -559,13 +728,42 @@ export default function App() {
                   ref={textareaRef}
                   id="raw-source-text"
                   value={rawText}
+                  onFocus={(e) => {
+                    if (window.innerWidth < 1024) {
+                      e.preventDefault();
+                      e.target.blur();
+                      setIsMainModalOpen(true);
+                    }
+                  }}
+                  onClick={(e) => {
+                    if (window.innerWidth < 1024) {
+                      e.preventDefault();
+                      setIsMainModalOpen(true);
+                    }
+                  }}
                   onChange={(e) => {
                     setRawText(e.target.value);
                     if (errorMsg) setErrorMsg(null);
                   }}
                   placeholder="Tempelkan artikel berita, draf siaran pers, atau pasal regulasi kepemiluan di sini..."
                   rows={12}
-                  className="w-full min-h-[260px] p-4 text-sm leading-relaxed text-[#1C1615] placeholder:text-[#9A8C87] bg-[#FDFBF7] border border-[#DDD2C4] rounded-lg focus:outline-none focus:border-[#8B1E24] focus:ring-2 focus:ring-[#8B1E24]/15 resize-y"
+                  className="w-full min-h-[260px] p-4 text-[16px] leading-relaxed text-[#1C1615] placeholder:text-[#9A8C87] bg-[#FDFBF7] border border-[#DDD2C4] rounded-lg focus:outline-none focus:border-[#8B1E24] focus:ring-2 focus:ring-[#8B1E24]/15 resize-y"
+                />
+
+                <FullScreenTextModal
+                  isOpen={isMainModalOpen}
+                  title="Teks Sumber (Berita / Siaran Pers / Regulasi)"
+                  initialValue={rawText}
+                  placeholder="Tempelkan artikel berita, draf siaran pers, atau pasal regulasi kepemiluan di sini..."
+                  onSave={(val) => {
+                    setRawText(val);
+                    if (errorMsg) setErrorMsg(null);
+                  }}
+                  onClose={() => setIsMainModalOpen(false)}
+                  onClear={() => {
+                    setRawText("");
+                    setErrorMsg(null);
+                  }}
                 />
 
                 <div className="mt-2 flex items-center justify-between text-xs text-[#6B5D5A] tabular-nums">
@@ -814,6 +1012,121 @@ export default function App() {
             </div>
 
             {/* Output States: Loading / Empty / Populated */}
+            {blueprint && !isLoading && (
+              <div className="mb-6 bg-white border border-[#E6DDD1] rounded-xl p-5 shadow-sm space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#8B1E24]"></span>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                      Metadata Blueprint {activeBlueprintId ? `(Tersimpan: ${activeBlueprintId})` : "(Belum Disimpan)"}
+                    </h3>
+                  </div>
+                  {saveToast && (
+                    <div className="px-3 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-lg border border-green-200 flex items-center gap-1.5 animate-in fade-in">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>{saveToast}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">
+                      Judul Topik
+                    </label>
+                    <input
+                      type="text"
+                      value={blueprintTitleInput}
+                      onChange={(e) => setBlueprintTitleInput(e.target.value)}
+                      placeholder="Judul topik carousel..."
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">
+                      Kategori
+                    </label>
+                    <select
+                      value={blueprintCategory}
+                      onChange={(e) => setBlueprintCategory(e.target.value as any)}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
+                    >
+                      <option value="Regulasi">Regulasi</option>
+                      <option value="Pencegahan">Pencegahan</option>
+                      <option value="Pengawasan">Pengawasan</option>
+                      <option value="Kegiatan">Kegiatan</option>
+                      <option value="Edukasi Publik">Edukasi Publik</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={blueprintStatus}
+                      onChange={(e) => setBlueprintStatus(e.target.value as any)}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
+                    >
+                      <option value="Draft">Draft</option>
+                      <option value="Siap Desain">Siap Desain</option>
+                      <option value="Sudah Tayang">Sudah Tayang</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">
+                      Pembuat
+                    </label>
+                    <input
+                      type="text"
+                      value={blueprintCreator}
+                      onChange={(e) => setBlueprintCreator(e.target.value)}
+                      placeholder="Nama staf..."
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
+                    />
+                  </div>
+                </div>
+
+                {/* Save Buttons */}
+                <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-gray-100">
+                  {activeBlueprintId === null ? (
+                    <button
+                      type="button"
+                      disabled={isSaving}
+                      onClick={() => handleSaveBlueprintToDb(false)}
+                      className="px-4 py-2.5 bg-[#8B1E24] hover:bg-[#72171C] text-white text-xs font-semibold rounded-lg shadow-sm transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{isSaving ? "Menyimpan..." : "Simpan ke Database"}</span>
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        disabled={isSaving}
+                        onClick={() => handleSaveBlueprintToDb(false)}
+                        className="px-4 py-2.5 bg-[#8B1E24] hover:bg-[#72171C] text-white text-xs font-semibold rounded-lg shadow-sm transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                      >
+                        <Save className="w-4 h-4" />
+                        <span>{isSaving ? "Menyimpan..." : "Simpan Perubahan (Update)"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isSaving}
+                        onClick={() => handleSaveBlueprintToDb(true)}
+                        className="px-4 py-2.5 bg-[#F3ECE1] hover:bg-[#EAE0D0] text-[#1C1615] text-xs font-semibold rounded-lg transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                      >
+                        <Copy className="w-4 h-4" />
+                        <span>Duplikat Sebagai Baru</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             {isLoading ? (
               <div className="space-y-4" aria-busy="true" aria-label="Memuat blueprint slide">
                 {Array.from({ length: slideCountMode === "exact" ? Math.min(slideCount, 4) : 4 }).map(
@@ -940,6 +1253,25 @@ export default function App() {
         onSaveRules={handleSaveCompositionRules}
         onResetAll={handleResetCompositionRules}
       />
+
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        savedSession={session}
+        onLoginSuccess={(newSession) => {
+          setSession(newSession);
+          setIsLoginModalOpen(false);
+          setBlueprintCreator(newSession.nama_staf);
+        }}
+      />
+
+      <HistoryDrawer
+        isOpen={isHistoryDrawerOpen}
+        onClose={() => setIsHistoryDrawerOpen(false)}
+        currentUserEmail={session?.email || ""}
+        onLoadBlueprint={handleLoadBlueprintFromHistory}
+      />
+
+      <ToastContainer />
     </div>
   );
 }

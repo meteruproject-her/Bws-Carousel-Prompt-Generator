@@ -51,12 +51,12 @@ export function buildLockedImagePrompt(params: PromptBuildInput): string {
   const validBodyAccents = containsPhrase(bodyCopy, bodyAccents);
 
   const headlineInstruction = validHeadlineAccent
-    ? `Render the exact headline "${headline}" with "${validHeadlineAccent}" highlighted inside the solid dark maroon rectangular box in white text.`
-    : `Render the exact headline "${headline}".`;
+    ? `Tampilkan judul (headline) persis "${headline}" dengan kata "${validHeadlineAccent}" disorot di dalam kotak persegi panjang merah marun solid dengan teks putih.`
+    : `Tampilkan judul (headline) persis "${headline}".`;
 
   const bodyInstruction = validBodyAccents
-    ? `Directly beneath it, render the exact body copy "${bodyCopy}" with "${validBodyAccents}" colored dark maroon.`
-    : `Directly beneath it, render the exact body copy "${bodyCopy}".`;
+    ? `Tepat di bawahnya, tampilkan subteks (body copy) persis "${bodyCopy}" dengan kata "${validBodyAccents}" berwarna merah marun gelap.`
+    : `Tepat di bawahnya, tampilkan subteks (body copy) persis "${bodyCopy}".`;
 
   const isDefaultSwipeRule =
     rules.swipeAndClearance.trim() ===
@@ -64,14 +64,14 @@ export function buildLockedImagePrompt(params: PromptBuildInput): string {
 
   let swipeSection: string;
   if (totalSlides <= 1) {
-    swipeSection = `Safe Illustration Clearance: Leave at least 40px of clean empty warm-cream breathing space directly beneath the body copy block before the character illustration begins so character heads never crowd or overlap the text.`;
+    swipeSection = `Jarak Aman Ilustrasi: Sisakan ruang kosong krem hangat yang bersih minimal 40px tepat di bawah blok body copy sebelum ilustrasi karakter dimulai agar kepala karakter tidak menumpuk atau bertabrakan dengan teks (no text overlap).`;
   } else if (isDefaultSwipeRule) {
     swipeSection =
       slideNum === 1 && totalSlides > 1
-        ? `Slide 1 SWIPE Badge & Safe Illustration Clearance: Directly beneath the body copy on the left side, place a compact maroon-outlined (#8B1E24) capsule badge with bold dark maroon text reading "SWIPE <<<" featuring three left-pointing arrows, followed by at least 40px of clean empty warm-cream breathing space below the badge before the character illustration begins so character heads never crowd the text.`
-        : `Safe Illustration Clearance: Leave at least 40px of clean empty warm-cream breathing space directly beneath the body copy block before the character illustration begins so character heads never crowd or overlap the text.`;
+        ? `Lencana SWIPE Slide 1 & Jarak Aman Ilustrasi: Tepat di bawah body copy di sisi kiri, tempatkan lencana kapsul bergaris tepi merah marun (#8B1E24) dengan teks tebal merah marun bertuliskan "SWIPE <<<" dilengkapi tiga panah mengarah ke kiri, diikuti ruang kosong krem hangat minimal 40px di bawah lencana sebelum ilustrasi karakter dimulai agar kepala karakter tidak bertabrakan dengan teks (no text overlap).`
+        : `Jarak Aman Ilustrasi: Sisakan ruang kosong krem hangat yang bersih minimal 40px tepat di bawah blok body copy sebelum ilustrasi karakter dimulai agar kepala karakter tidak menumpuk atau bertabrakan dengan teks (no text overlap).`;
   } else {
-    swipeSection = `SWIPE & Illustration Clearance for Slide ${slideNum} of ${totalSlides}: ${rules.swipeAndClearance}`;
+    swipeSection = `Aturan SWIPE & Jarak Aman Ilustrasi untuk Slide ${slideNum} dari ${totalSlides}: ${rules.swipeAndClearance}`;
   }
 
   const cleanIllustrationStyle = rules.illustrationStyle
@@ -80,13 +80,13 @@ export function buildLockedImagePrompt(params: PromptBuildInput): string {
 
   const sections: string[] = [
     rules.referenceAnchor,
-    `Canvas & Color Palette: ${rules.paletteAndRatio}`,
-    `Locked Top Header: ${rules.headerBranding}`,
-    `Margins, Typography & White Space: ${rules.typographyAndMargins} ${headlineInstruction} ${bodyInstruction}`,
+    `Kanvas & Palet Warna: ${rules.paletteAndRatio}`,
+    `Header Atas Terkunci: ${rules.headerBranding}`,
+    `Margin, Tipografi & Ruang Kosong: ${rules.typographyAndMargins} ${headlineInstruction} ${bodyInstruction}`,
     swipeSection,
-    `Main Illustration in the middle-to-lower frame: ${cleanIllustrationStyle} Scene Description: ${illustrationScene}`,
-    `Pagination Format & Position: ${resolvedPaging}`,
-    `Official Footer: ${rules.officialFooter}`,
+    `Ilustrasi Utama pada bagian tengah hingga bawah kanvas: ${cleanIllustrationStyle} Deskripsi Adegan: ${illustrationScene}`,
+    `Format & Posisi Penomoran Halaman: ${resolvedPaging}`,
+    `Footer Resmi: ${rules.officialFooter}`,
   ];
 
   return sections.join("\n\n");

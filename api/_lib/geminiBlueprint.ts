@@ -106,6 +106,11 @@ function buildBlueprintSystemInstruction(rules: CompositionRules): string {
   return `Anda adalah Senior Editorial Strategist dan Visual Prompt Architect untuk Bawaslu Kabupaten Paser.
 Tugas Anda adalah memecah teks mentah (artikel berita, siaran pers, atau pasal regulasi) menjadi blueprint konten carousel media sosial yang ringkas, padat, berimbang secara visual, dan tidak pernah penuh sesak.
 
+ATURAN BAHASA OUTPUT (WAJIB BAHASA INDONESIA):
+- Seluruh deskripsi visual ("illustration_scene"), arahan adegan, tata letak, narasi teks, judul ("title" dan "headline"), maupun subteks ("body_copy") pada setiap slide hasil generate WAJIB ditulis dalam **Bahasa Indonesia** yang jelas, baku, dan natural.
+- DILARANG KERAS menerjemahkan deskripsi visual ("illustration_scene") atau isi konten slide ke dalam Bahasa Inggris.
+- PENGECUALIAN ISTILAH TEKNIS / ATURAN PENGATURAN: Hanya istilah teknis desain, parameter aspect ratio, atau frasa aturan baku yang memang tertulis dalam Bahasa Inggris di dalam konfigurasi/pengaturan sistem (seperti "4:5", "clean sans-serif", "no text overlap", atau parameter gaya visual dari menu pengaturan) yang boleh dipertahankan apa adanya dalam Bahasa Inggris apabila diperlukan.
+
 ATURAN KETAT KESETIAAN FAKTA & ISTILAH HUKUM (STRICT GROUNDING - WAJIB):
 - Seluruh fakta, tahun, tanggal, nomor pasal/undang-undang, angka sanksi, dan prosedur dalam "title", "headline", dan "body_copy" WAJIB berasal murni dari TEKS SUMBER yang dimasukkan pengguna.
 - DILARANG KERAS mengarang, menebak, atau menambahkan tahun (seperti "Pemilu 2024"), nama layanan/aplikasi/kanal, nomor pasal, sanksi, atau klaim apa pun yang tidak tertulis secara eksplisit di dalam TEKS SUMBER. Jika teks sumber tidak menyebut tahun atau nama kanal tertentu, JANGAN memunculkannya.
@@ -129,15 +134,15 @@ ATURAN KETAT BATASAN PANJANG TEKS & STRUKTUR SLIDE (WAJIB DIPATUHI):
    ATURAN JUDUL RANGKUMAN SLIDE TERAKHIR: Apabila materi sumber membahas lebih dari satu topik pelanggaran (misalnya politik uang DAN netralitas ASN, atau beberapa jenis pelanggaran) dan slide terakhir membahas mekanisme pelaporan atau ajakan bertindak, maka headline slide terakhir WAJIB merangkum seluruh topik secara menyeluruh (contoh: "Laporkan Pelanggaran ke Bawaslu"), JANGAN hanya menyebut satu topik saja.
 3. headline_accent: Pilih tepat 1 hingga 2 kata kunci paling kuat yang persis ada di dalam "headline" tersebut untuk diberi sorotan aksen utama.
 4. body_copy: Bahasa Indonesia baku yang natural, utuh, dan akurat sesuai sumber. WAJIB terdiri dari 18 hingga 24 kata (cukup 2 hingga 3 baris pendek yang mudah dibaca, jangan dipotong terlalu pendek di bawah 18 kata dan jangan melebihi 24 kata).
-   KHUSUS SLIDE 1 (PEMBUKA): body_copy pada Slide 1 WAJIB berisi 18 hingga 24 kata yang merangkum isi paragraf pertama secara utuh—termasuk menyebut dasar undang-undang, peraturan, atau nomor pasal apabila tercantum pada paragraf awal—tanpa memotong konteks pentingnya.
+   KHUSUS SLIDE 1 (PEMBUKA): body_copy pada Slide 1 WAJIB berisi 18 hingga 24 kata yang merangkum isi paragraf pertama secara utuh—termasuk menyebut dasar undang-undangnya, peraturan, atau nomor pasal apabila tercantum pada paragraf awal—tanpa memotong konteks pentingnya.
 5. body_accents: Pilih 1 hingga 3 kata kunci penting yang persis ada di dalam "body_copy" tersebut untuk diberi warna aksen.
-6. illustration_scene: WAJIB ditulis dalam Bahasa Inggris (2 hingga 3 kalimat deskriptif) untuk adegan di bagian tengah ke bawah kanvas yang selaras dengan gaya visual berikut: "${rules.illustrationStyle}".
+6. illustration_scene: WAJIB ditulis dalam **Bahasa Indonesia** yang jelas dan natural (2 hingga 3 kalimat deskriptif, JANGAN ditulis atau diterjemahkan ke Bahasa Inggris) untuk adegan di bagian tengah ke bawah kanvas yang selaras dengan arahan gaya visual pengaturan berikut: "${rules.illustrationStyle}".
    ATURAN ADEGAN TUNGGAL (SINGLE-MOMENT SCENE - WAJIB):
-   - Gambarkan HANYA SATU momen visual tunggal yang fokus (satu aksi freeze-frame pada satu waktu dan satu lokasi).
-   - DILARANG KERAS menggabungkan dua kejadian berurutan dalam satu gambar (misalnya JANGAN menulis "merekam pelanggaran lalu melapor ke kantor", "menemukan uang lalu menyerahkan formulir", atau "reading then walking"). Pilih tepat satu momen visual terkuat untuk slide itu!
-   - Wajib menyertakan detail ekspresi wajah karakter yang jelas (misalnya determined, attentive, firm, concerned, welcoming), pose/bahasa tubuh spesifik, serta detail latar tempat nyata yang konkret (misalnya Kabupaten Paser village hall wooden table, sunny neighborhood alley with campaign banners, Bawaslu reporting desk, polling station entrance).
+   - Gambarkan HANYA SATU momen visual tunggal yang fokus (satu aksi diam/freeze-frame pada satu waktu dan satu lokasi).
+   - DILARANG KERAS menggabungkan dua kejadian berurutan dalam satu gambar (misalnya JANGAN menulis "merekam pelanggaran lalu melapor ke kantor", "menemukan uang lalu menyerahkan formulir", atau "membaca lalu berjalan"). Pilih tepat satu momen visual terkuat untuk slide itu!
+   - Wajib menyertakan detail ekspresi wajah karakter yang jelas (misalnya tegas, penuh perhatian, waspada, prihatin, atau ramah), pose/bahasa tubuh spesifik, serta detail latar tempat nyata di Indonesia/Kabupaten Paser yang konkret (misalnya meja kayu di balai desa Kabupaten Paser, gang permukiman yang cerah dengan spanduk kampanye, meja layanan pengaduan Bawaslu, atau pintu masuk TPS).
    ATURAN VISUALISASI PELANGGARAN YANG JELAS (ANTI-AMBIGU - WAJIB):
-   - Apabila adegan menggambarkan tindakan yang dilarang (seperti politik uang, pemberian amplop/barang, pelanggaran netralitas ASN, intimidasi, atau penyebaran hoaks), WAJIB sertakan elemen visual penolakan/pengawasan yang tegas dan tidak ambigu: misalnya gestur tangan menolak tegas (palm raised in firm refusal) disertai ekspresi wajah menolak, ikon tanda silang/larangan merah marun (#8B1E24 prohibition cross/slash) yang jelas di atas tindakan/objek pelanggaran, atau pengawas Bawaslu berseragam rompi pengawas yang menghentikan/menindak pelanggaran tersebut. Jangan pernah menggambarkan pelanggaran secara netral/positif hingga terkesan mempromosikan tindakan terlarang.
+   - Apabila adegan menggambarkan tindakan yang dilarang (seperti politik uang, pemberian amplop/barang, pelanggaran netralitas ASN, intimidasi, atau penyebaran hoaks), WAJIB sertakan elemen visual penolakan/pengawasan yang tegas dan tidak ambigu dalam Bahasa Indonesia: misalnya gestur telapak tangan menolak tegas disertai ekspresi wajah menolak, ikon tanda silang/larangan berwarna merah marun (#8B1E24) yang jelas di atas tindakan/objek pelanggaran, atau pengawas Bawaslu berseragam rompi pengawas yang menghentikan tindakan tersebut. Jangan pernah menggambarkan pelanggaran secara netral/positif hingga terkesan mempromosikan tindakan terlarang.
    - Jangan menyebut header, footer, nomor halaman, contoh meta, atau SWIPE di dalam illustration_scene karena akan dirakit terpisah.
 
 FORMAT OUTPUT WAJIB:
@@ -147,6 +152,11 @@ Kembalikan HANYA objek JSON valid sesuai skema tanpa teks tambahan.`;
 function buildSingleSlideSystemInstruction(rules: CompositionRules): string {
   return `Anda adalah Senior Editorial Strategist dan Visual Prompt Architect untuk Bawaslu Kabupaten Paser.
 Tugas Anda adalah merevisi HANYA SATU slide carousel media sosial sesuai arahan pengguna.
+
+ATURAN BAHASA OUTPUT (WAJIB BAHASA INDONESIA):
+- Seluruh deskripsi visual ("illustration_scene"), arahan adegan, tata letak, narasi teks, judul ("headline"), maupun subteks ("body_copy") pada slide hasil revisi WAJIB ditulis dalam **Bahasa Indonesia** yang jelas, baku, dan natural.
+- DILARANG KERAS menerjemahkan deskripsi visual ("illustration_scene") atau isi konten slide ke dalam Bahasa Inggris.
+- PENGECUALIAN ISTILAH TEKNIS / ATURAN PENGATURAN: Hanya istilah teknis desain, parameter aspect ratio, atau frasa aturan baku yang memang tertulis dalam Bahasa Inggris di dalam konfigurasi/pengaturan sistem (seperti "4:5", "clean sans-serif", "no text overlap", atau parameter gaya visual dari menu pengaturan) yang boleh dipertahankan apa adanya dalam Bahasa Inggris apabila diperlukan.
 
 ATURAN KETAT KESETIAAN FAKTA & ISTILAH HUKUM (STRICT GROUNDING - WAJIB):
 - Seluruh fakta, tahun, tanggal, nomor pasal, sanksi, dan prosedur dalam "headline" dan "body_copy" WAJIB berasal murni dari TEKS SUMBER REFERENSI dan/atau ARAHAN REVISI PENGGUNA.
@@ -163,11 +173,11 @@ ATURAN KETAT BATASAN PANJANG TEKS & ADEGAN:
 2. headline_accent: Pilih tepat 1 hingga 2 kata kunci persis dari "headline" tersebut untuk diberi sorotan aksen utama.
 3. body_copy: Bahasa Indonesia baku yang natural dan utuh. WAJIB terdiri dari 18 hingga 24 kata (2 hingga 3 baris pendek, jangan terlalu pendek di bawah 18 kata). Jika ini Slide 1, rangkum paragraf pertama secara utuh termasuk dasar undang-undangnya bila tercantum pada paragraf awal.
 4. body_accents: Pilih 1 hingga 3 kata kunci penting persis dari "body_copy" tersebut untuk diberi warna aksen.
-5. illustration_scene: WAJIB ditulis dalam Bahasa Inggris (2 hingga 3 kalimat deskriptif) untuk adegan di bagian tengah ke bawah kanvas yang selaras dengan gaya visual: "${rules.illustrationStyle}".
+5. illustration_scene: WAJIB ditulis dalam **Bahasa Indonesia** yang jelas dan natural (2 hingga 3 kalimat deskriptif, JANGAN ditulis atau diterjemahkan ke Bahasa Inggris) untuk adegan di bagian tengah ke bawah kanvas yang selaras dengan gaya visual pengaturan: "${rules.illustrationStyle}".
    ATURAN ADEGAN TUNGGAL & ANTI-AMBIGU (WAJIB):
-   - Gambarkan HANYA SATU momen visual tunggal yang fokus (satu aksi freeze-frame pada satu lokasi). DILARANG menggabungkan dua kejadian berurutan dalam satu gambar.
-   - Wajib menyertakan detail ekspresi wajah karakter yang jelas, pose tubuh spesifik, serta detail latar tempat yang konkret.
-   - Jika adegan menggambarkan tindakan yang dilarang (seperti politik uang atau pelanggaran netralitas), WAJIB sertakan elemen visual penolakan/pengawasan tegas (gestur tangan menolak, ikon tanda silang/larangan merah marun #8B1E24, atau pengawas Bawaslu yang menghentikan tindakan tersebut) agar tidak terkesan mempromosikan pelanggaran.
+   - Gambarkan HANYA SATU momen visual tunggal yang fokus (satu aksi diam/freeze-frame pada satu lokasi). DILARANG menggabungkan dua kejadian berurutan dalam satu gambar.
+   - Wajib menyertakan detail ekspresi wajah karakter yang jelas, pose tubuh spesifik, serta detail latar tempat di Indonesia yang konkret.
+   - Jika adegan menggambarkan tindakan yang dilarang (seperti politik uang atau pelanggaran netralitas), WAJIB sertakan elemen visual penolakan/pengawasan tegas dalam Bahasa Indonesia (gestur tangan menolak tegas, ikon tanda silang/larangan merah marun #8B1E24, atau pengawas Bawaslu berseragam rompi yang menghentikan tindakan tersebut) agar tidak terkesan mempromosikan pelanggaran.
    - Jangan menyebut header, footer, nomor halaman, atau SWIPE di dalam illustration_scene.
 
 FORMAT OUTPUT WAJIB:
@@ -210,7 +220,7 @@ const BLUEPRINT_RESPONSE_SCHEMA: Schema = {
           illustration_scene: {
             type: Type.STRING,
             description:
-              "2-3 English sentences describing ONE single frozen visual moment with clear facial expression, pose, anti-ambiguity cue if depicting a violation, and concrete setting.",
+              "2-3 kalimat deskriptif dalam Bahasa Indonesia (dilarang diterjemahkan ke Bahasa Inggris) yang menggambarkan SATU momen visual tunggal dengan ekspresi wajah jelas, pose spesifik, elemen penolakan/pengawasan tegas jika menggambarkan pelanggaran, dan detail latar tempat yang konkret.",
           },
         },
         required: [
@@ -249,7 +259,7 @@ const SINGLE_SLIDE_RESPONSE_SCHEMA: Schema = {
     illustration_scene: {
       type: Type.STRING,
       description:
-        "2-3 English sentences describing ONE single frozen visual moment with specific facial expression, anti-ambiguity cue if depicting a violation, and concrete background details.",
+        "2-3 kalimat deskriptif dalam Bahasa Indonesia (dilarang diterjemahkan ke Bahasa Inggris) yang menggambarkan SATU momen visual tunggal dengan ekspresi wajah spesifik, elemen penolakan/pengawasan tegas jika menggambarkan pelanggaran, dan detail latar tempat yang konkret.",
     },
   },
   required: [
@@ -497,7 +507,7 @@ ${rawText.slice(0, 18000)}
     const paginationText = `Slide ${idx + 1} dari ${total}`;
     const illustrationScene = String(
       slide.illustration_scene ??
-        "An Indonesian Bawaslu supervisor in a neat dark maroon vest standing beside a wooden table in a sunlit Kabupaten Paser village hall, wearing an attentive expression while reviewing a printed checklist."
+        "Seorang pengawas Bawaslu Kabupaten Paser mengenakan rompi merah marun rapi berdiri di samping meja kayu di balai desa yang terang, menampilkan ekspresi penuh perhatian saat memeriksa daftar periksa cetak."
     ).trim();
 
     const imagePrompt = buildLockedImagePrompt({
